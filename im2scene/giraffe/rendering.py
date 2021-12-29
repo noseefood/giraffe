@@ -88,27 +88,53 @@ class Renderer(object):
 
         # Set Camera
         camera_matrices = gen.get_camera(batch_size=batch_size)
+        # 缩放部分
         s_val = [[0, 0, 0] for i in range(n_boxes)]
+        # 平移部分
         t_val = [[0.5, 0.5, 0.5] for i in range(n_boxes)]
+        # 旋转部分
         r_val = [0. for i in range(n_boxes)]
         s, t, _ = gen.get_transformations(s_val, t_val, r_val, batch_size)
 
         out = []
+
+        # test 记录生成次数
+        i = 0
+
         for step in range(n_steps):
             # Get rotation for this step
             r = [step * 1.0 / (n_steps - 1) for i in range(n_boxes)]
             r = [r_scale[0] + ri * (r_scale[1] - r_scale[0]) for ri in r]
+            # 获得旋转矩阵
             r = gen.get_rotation(r, batch_size)
+            # test部分
+            # print(r)
+            print(r.shape)    # torch.Size([15, 1, 3, 3]) 这里的15是来自于batch_size=15
+            print(r[1].reshape(3, 3))
+            print((r[1].reshape(3, 3)).shape)  # 生成torch.Size([3, 3])旋转矩阵
+            i = i + 1
 
             # define full transformation and evaluate model
             transformations = [s, t, r]
             with torch.no_grad():
+                # 将变换传递给Generator来做体渲染和神经渲染, latent_codes是物体和背景的外观和形状编码
+                # 每一次生成一组相同的旋转矩阵，生成宗变换，然后喂入生成器产生一个新的out_i
                 out_i = gen(batch_size, latent_codes, camera_matrices,
                             transformations, bg_rotation, mode='val')
+                ######
+                print(out_i)  # 输出测试
+                print(out_i.shape)  # 每一次的图片 torch.Size([15, 3, 256, 256])，15是batch，3为channel
+                ######
+
             out.append(out_i.cpu())
+
+        print(i)  # i为64
+
         out = torch.stack(out)
+        # 建立输出目录out
         out_folder = join(img_out_path, 'rotation_object')
         makedirs(out_folder, exist_ok=True)
+        # 保存图片视频  def save_video_and_images(self, imgs, out_folder
         self.save_video_and_images(
             out, out_folder, name='rotation_object',
             is_full_rotation=is_full_rotation,

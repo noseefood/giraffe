@@ -29,6 +29,8 @@ checkpoint_io.load(cfg['test']['model_file'])
 renderer = config.get_renderer(model, cfg, device=device)
 
 model.eval()
+# renderer.render_full_visualization在im2scene的rendering里面
+# render_program的值在default里面设置
 out = renderer.render_full_visualization(
     render_dir,
     cfg['rendering']['render_program'])
