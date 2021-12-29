@@ -9,12 +9,12 @@ class BoundingBoxGenerator(nn.Module):
     ''' Bounding box generator class
 
     Args:
-        n_boxes (int): number of bounding boxes (excluding background)
+        n_boxes (int): number of bounding boxes (excluding background)  物体数目？默认为1
         scale_range_min (list): min scale values for x, y, z
         scale_range_max (list): max scale values for x, y, z
         translation_range_min (list): min values for x, y, z translation
         translation_range_max (list): max values for x, y, z translation
-        z_level_plane (float): value of z-plane; only relevant if
+        z_level_plane (float): value of z-plane; only relevant if  相机高程？
             object_on_plane is set True
         rotation_range (list): min and max rotation value (between 0 and 1)
         check_collision (bool): whether to check for collisions

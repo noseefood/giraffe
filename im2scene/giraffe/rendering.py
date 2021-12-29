@@ -71,15 +71,16 @@ class Renderer(object):
                 self.render_add_objects_clevr6(img_out_path)
 
     def render_object_rotation(self, img_out_path, batch_size=15, n_steps=32):
+        # 之前引入的self.generator
         gen = self.generator
         bbox_generator = gen.bounding_box_generator
-
+        # n_boxes为多少？
         n_boxes = bbox_generator.n_boxes
 
-        # Set rotation range
+        # Set rotation range 总的旋转程度
         is_full_rotation = (bbox_generator.rotation_range[0] == 0
                             and bbox_generator.rotation_range[1] == 1)
-        n_steps = int(n_steps * 2) if is_full_rotation else n_steps
+        n_steps = int(n_steps * 2) if is_full_rotation else n_steps  # 这里n_steps其实乘以了2，说明是is_full_rotation为True
         r_scale = [0., 1.] if is_full_rotation else [0.1, 0.9]
 
         # Get Random codes and bg rotation
@@ -92,8 +93,10 @@ class Renderer(object):
         s_val = [[0, 0, 0] for i in range(n_boxes)]
         # 平移部分
         t_val = [[0.5, 0.5, 0.5] for i in range(n_boxes)]
-        # 旋转部分
+        # 旋转部分 n_boxes相当于有几个Object
         r_val = [0. for i in range(n_boxes)]
+
+        # 见giraffe/im2scene/model/giraffe/models/generators，因为这部分是纯旋转，故缩放与平移以及固定下来，最后在加上旋转
         s, t, _ = gen.get_transformations(s_val, t_val, r_val, batch_size)
 
         out = []
@@ -103,10 +106,12 @@ class Renderer(object):
 
         # step其实说明整个旋转矩阵使用了n_steps个，每一次绕z轴的旋转矩阵都会发生一点变化，具体图片中产生几种旋转的小图由n_image参数决定
         for step in range(n_steps):
-            # Get rotation for this step
+            # Get rotation for this step 注意由于我们的n_boxes为1，故这里r其实相当于一个只有一个元素的列表
+            # 注意一开始step为0
             r = [step * 1.0 / (n_steps - 1) for i in range(n_boxes)]
             r = [r_scale[0] + ri * (r_scale[1] - r_scale[0]) for ri in r]
-            # 获得旋转矩阵
+            # print(r) 此时生成的r为一个只包含一个元素的列表[]
+            # 获得旋转矩阵 最终计算旋转矩阵其实在camera.py中
             r = gen.get_rotation(r, batch_size)
             # test部分
             # print(r)
@@ -115,7 +120,7 @@ class Renderer(object):
             print((r[1].reshape(3, 3)).shape)  # 生成torch.Size([3, 3])旋转矩阵
             i = i + 1
 
-            # define full transformation and evaluate model
+            # define full transformation and evaluate model 每一次生成的不同旋转加上之前固定的平移和缩放构成了每一次的变换，共2*n_steps次
             transformations = [s, t, r]
             with torch.no_grad():
                 # 将变换传递给Generator来做体渲染和神经渲染, latent_codes是物体和背景的外观和形状编码
@@ -123,8 +128,8 @@ class Renderer(object):
                 out_i = gen(batch_size, latent_codes, camera_matrices,
                             transformations, bg_rotation, mode='val')
                 ######
-                print(out_i)  # 输出测试
-                print(out_i.shape)  # 每一次的图片 torch.Size([15, 3, 256, 256])，15是batch，3为channel
+                # print(out_i)  # 输出测试
+                # print(out_i.shape)  # 每一次的图片 torch.Size([15, 3, 256, 256])，15是batch，3为channel
                 ######
 
             out.append(out_i.cpu())
@@ -137,6 +142,7 @@ class Renderer(object):
         makedirs(out_folder, exist_ok=True)
         # 保存图片视频  def save_video_and_images(self, imgs, out_folder....
         # 最后生成的图片系列有15张，每一张里面包含了六种旋转图像的小图像
+        # 各个角度的都算完了，之后再保存
         self.save_video_and_images(
             out, out_folder, name='rotation_object',
             is_full_rotation=is_full_rotation,
@@ -606,7 +612,7 @@ class Renderer(object):
                 (out_file[:-4] + '_sm.mp4'), img, fps=30, quality=4)
 
     def save_video_and_images(self, imgs, out_folder, name='rotation_object',
-                              is_full_rotation=False, img_n_steps=16,
+                              is_full_rotation=False, img_n_steps=6,
                               add_reverse=False):
         # img_n_steps=6 这个参数决定了一张图片里面有多少个旋转的小图片
         # Save video
