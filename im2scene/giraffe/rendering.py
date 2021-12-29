@@ -101,6 +101,7 @@ class Renderer(object):
         # test 记录生成次数
         i = 0
 
+        # step其实说明整个旋转矩阵使用了n_steps个，每一次绕z轴的旋转矩阵都会发生一点变化，具体图片中产生几种旋转的小图由n_image参数决定
         for step in range(n_steps):
             # Get rotation for this step
             r = [step * 1.0 / (n_steps - 1) for i in range(n_boxes)]
@@ -109,7 +110,7 @@ class Renderer(object):
             r = gen.get_rotation(r, batch_size)
             # test部分
             # print(r)
-            print(r.shape)    # torch.Size([15, 1, 3, 3]) 这里的15是来自于batch_size=15
+            print(r.shape)    # torch.Size([15, 1, 3, 3]) 这里的15是来自于batch_size=15，一次性喂入15个旋转矩阵，对应之后生成的15张大图片
             print(r[1].reshape(3, 3))
             print((r[1].reshape(3, 3)).shape)  # 生成torch.Size([3, 3])旋转矩阵
             i = i + 1
@@ -118,7 +119,7 @@ class Renderer(object):
             transformations = [s, t, r]
             with torch.no_grad():
                 # 将变换传递给Generator来做体渲染和神经渲染, latent_codes是物体和背景的外观和形状编码
-                # 每一次生成一组相同的旋转矩阵，生成宗变换，然后喂入生成器产生一个新的out_i
+                # 每一次生成一组相同的旋转矩阵，结合缩放平移生成变换，然后喂入生成器产生一个新的out_i
                 out_i = gen(batch_size, latent_codes, camera_matrices,
                             transformations, bg_rotation, mode='val')
                 ######
@@ -134,7 +135,8 @@ class Renderer(object):
         # 建立输出目录out
         out_folder = join(img_out_path, 'rotation_object')
         makedirs(out_folder, exist_ok=True)
-        # 保存图片视频  def save_video_and_images(self, imgs, out_folder
+        # 保存图片视频  def save_video_and_images(self, imgs, out_folder....
+        # 最后生成的图片系列有15张，每一张里面包含了六种旋转图像的小图像
         self.save_video_and_images(
             out, out_folder, name='rotation_object',
             is_full_rotation=is_full_rotation,
@@ -604,9 +606,9 @@ class Renderer(object):
                 (out_file[:-4] + '_sm.mp4'), img, fps=30, quality=4)
 
     def save_video_and_images(self, imgs, out_folder, name='rotation_object',
-                              is_full_rotation=False, img_n_steps=6,
+                              is_full_rotation=False, img_n_steps=16,
                               add_reverse=False):
-
+        # img_n_steps=6 这个参数决定了一张图片里面有多少个旋转的小图片
         # Save video
         out_file_video = join(out_folder, '%s.mp4' % name)
         self.write_video(out_file_video, imgs, add_reverse=add_reverse)
