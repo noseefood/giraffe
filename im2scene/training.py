@@ -67,7 +67,7 @@ def update_average(model_tgt, model_src, beta):
         p_tgt.copy_(beta*p_tgt + (1. - beta)*p_src)
 
 
-def compute_bce(d_out, target):
+def compute_bce(d_out: object, target: object) -> object:
     targets = d_out.new_full(size=d_out.size(), fill_value=target)
     loss = F.binary_cross_entropy_with_logits(d_out, targets)
     return loss

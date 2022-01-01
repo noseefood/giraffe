@@ -4,6 +4,7 @@ from scipy.spatial.transform import Rotation as Rot
 
 
 def get_camera_mat(fov=49.13, invert=True):
+    # 相机内参
     # fov = 2 * arctan( sensor / (2 * focal))
     # focal = (sensor / 2)  * 1 / (tan(0.5 * fov))
     # in our case, sensor = 2 as pixels are in [-1, 1]
@@ -54,8 +55,8 @@ def get_middle_pose(range_u, range_v, range_radius, batch_size=32,
     return RT
 
 
-def get_camera_pose(range_u, range_v, range_r, val_u=0.5, val_v=0.5, val_r=0.5,
-                    batch_size=32, invert=False):
+def get_camera_pose(range_u: object, range_v: object, range_r: object, val_u: object = 0.5, val_v: object = 0.5, val_r: object = 0.5,
+                    batch_size: object = 32, invert: object = False) -> object:
     u0, ur = range_u[0], range_u[1] - range_u[0]
     v0, vr = range_v[0], range_v[1] - range_v[0]
     r0, rr = range_r[0], range_r[1] - range_r[0]
@@ -127,8 +128,8 @@ def look_at(eye, at=np.array([0, 0, 0]), up=np.array([0, 0, 1]), eps=1e-5,
     return r_mat
 
 
-def get_rotation_matrix(axis='z', value=0., batch_size=32):
-    # 这里的batch_size会被外部的覆盖，我们默认采用的为16，即16种车型，对每一种车型都进行一样的旋转
+def get_rotation_matrix(axis: object = 'z', value: object = 0., batch_size: object = 32) -> object:
+    # 这里的batch_size会被外部的覆盖，我们默认采用的为16，即16种车型，对每一种车型（不同的shape和appearance）都进行一样的旋转
     r = Rot.from_euler(axis, value * 2 * np.pi).as_dcm()
     r = torch.from_numpy(r).reshape(1, 3, 3).repeat(batch_size, 1, 1)
     return r

@@ -1,11 +1,14 @@
+from typing import Any, Union
+
 import torch
 import numpy as np
 from im2scene.common import interpolate_sphere
 from torchvision.utils import save_image, make_grid
 import imageio
-from math import sqrt
+from math import sqrt, degrees
 from os import makedirs
 from os.path import join
+
 
 
 class Renderer(object):
@@ -39,6 +42,11 @@ class Renderer(object):
             if rp == 'object_rotation':
                 self.set_random_seed()
                 self.render_object_rotation(img_out_path)
+            # 自定义一个平移加旋转的变换
+            if rp == 'object_wipeout':
+                self.set_random_seed()
+                self.render_object_wipeout(img_out_path)
+            ####
             if rp == 'object_translation_horizontal':
                 self.set_random_seed()
                 self.render_object_translation_horizontal(img_out_path)
@@ -78,12 +86,12 @@ class Renderer(object):
         n_boxes = bbox_generator.n_boxes
 
         # Set rotation range 总的旋转程度
-        is_full_rotation = (bbox_generator.rotation_range[0] == 0
+        is_full_rotation: Union[bool, Any] = (bbox_generator.rotation_range[0] == 0
                             and bbox_generator.rotation_range[1] == 1)
         n_steps = int(n_steps * 2) if is_full_rotation else n_steps  # 这里n_steps其实乘以了2，说明是is_full_rotation为True
         r_scale = [0., 1.] if is_full_rotation else [0.1, 0.9]
 
-        # Get Random codes and bg rotation
+        # Get Random codes and bg rotation 共有batch_size种车，即shape和appearance
         latent_codes = gen.get_latent_codes(batch_size, tmp=self.sample_tmp)
         bg_rotation = gen.get_random_bg_rotation(batch_size)
 
@@ -104,20 +112,25 @@ class Renderer(object):
         # test 记录生成次数
         i = 0
 
+        # 记录每一次与输入图片的最好loss
+        best_loss = 0
         # step其实说明整个旋转矩阵使用了n_steps个，每一次绕z轴的旋转矩阵都会发生一点变化，具体图片中产生几种旋转的小图由n_image参数决定
         for step in range(n_steps):
             # Get rotation for this step 注意由于我们的n_boxes为1，故这里r其实相当于一个只有一个元素的列表
             # 注意一开始step为0
             r = [step * 1.0 / (n_steps - 1) for i in range(n_boxes)]
             r = [r_scale[0] + ri * (r_scale[1] - r_scale[0]) for ri in r]
-            # print(r) 此时生成的r为一个只包含一个元素的列表[]
+            # 计算角度
+            angle = r[0] * 2 * np.pi
+            print(degrees(angle))
+            # print(r)  # 此时生成的r为一个只包含一个元素的列表[]
             # 获得旋转矩阵 最终计算旋转矩阵其实在camera.py中
             r = gen.get_rotation(r, batch_size)
             # test部分
             # print(r)
-            print(r.shape)    # torch.Size([15, 1, 3, 3]) 这里的15是来自于batch_size=15，一次性喂入15个旋转矩阵，对应之后生成的15张大图片
-            print(r[1].reshape(3, 3))
-            print((r[1].reshape(3, 3)).shape)  # 生成torch.Size([3, 3])旋转矩阵
+            # print(r.shape)    # torch.Size([15, 1, 3, 3]) 这里的15是来自于batch_size=15，一次性喂入15个旋转矩阵，对应之后生成的15张大图片,15的R其实都一样
+            # print(r[1].reshape(3, 3))
+            # print((r[1].reshape(3, 3)).shape)  # 生成torch.Size([3, 3])旋转矩阵
             i = i + 1
 
             # define full transformation and evaluate model 每一次生成的不同旋转加上之前固定的平移和缩放构成了每一次的变换，共2*n_steps次
@@ -184,6 +197,51 @@ class Renderer(object):
         self.save_video_and_images(
             out, out_folder, name='translation_horizontal',
             add_reverse=True)
+
+    # 自定义的旋转加平移变换
+    def render_object_wipeout(self, img_out_path, batch_size=15,
+            n_steps=32):
+        gen = self.generator
+
+        # Get values
+        latent_codes = gen.get_latent_codes(batch_size, tmp=self.sample_tmp)
+        bg_rotation = gen.get_random_bg_rotation(batch_size)
+        camera_matrices = gen.get_camera(batch_size=batch_size)
+        n_boxes = gen.bounding_box_generator.n_boxes
+        s = [[0., 0., 0.]
+             for i in range(n_boxes)]
+        n_steps = int(n_steps * 2)
+        r_scale = [0., 1.]
+
+        if n_boxes == 1:
+            t = []
+            x_val = 0.5
+        elif n_boxes == 2:
+            t = [[0.5, 0.5, 0.]]
+            x_val = 1.0
+
+        out = []
+        for step in range(n_steps):
+            # translation
+            i = step * 1.0 / (n_steps - 1)
+            ti = t + [[0.1, i, 0.]]
+            # rotation
+            r = [step * 1.0 / (n_steps - 1) for i in range(n_boxes)]
+            r = [r_scale[0] + ri * (r_scale[1] - r_scale[0]) for ri in r]
+
+            transformations = gen.get_transformations(s, ti, r, batch_size)
+            with torch.no_grad():
+                out_i = gen(batch_size, latent_codes, camera_matrices,
+                            transformations, bg_rotation, mode='val')
+            out.append(out_i.cpu())
+        out = torch.stack(out)
+
+        out_folder = join(img_out_path, 'object_wipeout')
+        makedirs(out_folder, exist_ok=True)
+        self.save_video_and_images(
+            out, out_folder, name='object_wipeout',
+            add_reverse=True)
+        ###
 
     def render_object_translation_depth(self, img_out_path, batch_size=15,
                                         n_steps=32):
@@ -377,6 +435,7 @@ class Renderer(object):
                                    is_full_rotation=True)
 
     def render_camera_elevation(self, img_out_path, batch_size=15, n_steps=32):
+        # 只有相机高程的调整
         gen = self.generator
         n_boxes = gen.bounding_box_generator.n_boxes
         r_range = [0.1, 0.9]
@@ -409,7 +468,7 @@ class Renderer(object):
                                    is_full_rotation=False)
 
     def render_add_objects_cars5(self, img_out_path, batch_size=15):
-
+        # 增加Object（车）数目
         gen = self.generator
 
         # Get values
@@ -615,8 +674,9 @@ class Renderer(object):
                               is_full_rotation=False, img_n_steps=6,
                               add_reverse=False):
         # img_n_steps=6 这个参数决定了一张图片里面有多少个旋转的小图片
-        # Save video
         out_file_video = join(out_folder, '%s.mp4' % name)
+
+        # Save video 见上
         self.write_video(out_file_video, imgs, add_reverse=add_reverse)
 
         # Save images

@@ -137,8 +137,10 @@ class Trainer(BaseTrainer):
         return gloss.item()
 
     def train_step_discriminator(self, data, it=None, z=None):
+        # 定义G和D
         generator = self.generator
         discriminator = self.discriminator
+        # 训练
         toggle_grad(generator, False)
         toggle_grad(discriminator, True)
         generator.train()
@@ -152,6 +154,7 @@ class Trainer(BaseTrainer):
         x_real.requires_grad_()
         d_real = discriminator(x_real)
 
+        # 见im2scene中的training
         d_loss_real = compute_bce(d_real, 1)
         loss_d_full += d_loss_real
 
