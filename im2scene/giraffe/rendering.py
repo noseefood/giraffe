@@ -97,9 +97,9 @@ class Renderer(object):
 
         # Set Camera
         camera_matrices = gen.get_camera(batch_size=batch_size)
-        # 缩放部分
+        # 缩放部分 无缩放
         s_val = [[0, 0, 0] for i in range(n_boxes)]
-        # 平移部分
+        # 平移部分 一个固定的平移
         t_val = [[0.5, 0.5, 0.5] for i in range(n_boxes)]
         # 旋转部分 n_boxes相当于有几个Object
         r_val = [0. for i in range(n_boxes)]
@@ -199,8 +199,7 @@ class Renderer(object):
             add_reverse=True)
 
     # 自定义的旋转加平移变换
-    def render_object_wipeout(self, img_out_path, batch_size=15,
-            n_steps=32):
+    def render_object_wipeout(self, img_out_path, batch_size=15, n_steps=32):
         gen = self.generator
 
         # Get values
@@ -208,9 +207,10 @@ class Renderer(object):
         bg_rotation = gen.get_random_bg_rotation(batch_size)
         camera_matrices = gen.get_camera(batch_size=batch_size)
         n_boxes = gen.bounding_box_generator.n_boxes
-        s = [[0., 0., 0.]
+        s = [[0., 0., 0.]   # 无缩放
              for i in range(n_boxes)]
         n_steps = int(n_steps * 2)
+        # 最小为0最大为1
         r_scale = [0., 1.]
 
         if n_boxes == 1:
@@ -222,10 +222,10 @@ class Renderer(object):
 
         out = []
         for step in range(n_steps):
-            # translation
+            # translation 变化的平移，与纯旋转可以对比
             i = step * 1.0 / (n_steps - 1)
             ti = t + [[0.1, i, 0.]]
-            # rotation
+            # rotation 跟纯旋转一样
             r = [step * 1.0 / (n_steps - 1) for i in range(n_boxes)]
             r = [r_scale[0] + ri * (r_scale[1] - r_scale[0]) for ri in r]
 
