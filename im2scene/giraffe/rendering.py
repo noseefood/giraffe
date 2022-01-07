@@ -436,8 +436,10 @@ class Renderer(object):
 
     def render_camera_elevation(self, img_out_path, batch_size=15, n_steps=64):
         # 只有相机高程的调整
+        # 跟旋转一样的代码
         gen = self.generator
         n_boxes = gen.bounding_box_generator.n_boxes
+        #
         r_range = [0.1, 0.9]
 
         # Get values
@@ -454,7 +456,9 @@ class Renderer(object):
         for step in range(n_steps):
             v = step * 1.0 / (n_steps - 1)
             r = r_range[0] + v * (r_range[1] - r_range[0])
+            # 注意这里向相机多传入了一个参数r
             camera_matrices = gen.get_camera(val_v=r, batch_size=batch_size)
+    # 以下都是一样的
             with torch.no_grad():
                 out_i = gen(
                     batch_size, latent_codes, camera_matrices, transformations,
@@ -671,7 +675,7 @@ class Renderer(object):
                 (out_file[:-4] + '_sm.mp4'), img, fps=30, quality=4)
 
     def save_video_and_images(self, imgs, out_folder, name='rotation_object',
-                              is_full_rotation=False, img_n_steps=6,
+                              is_full_rotation=False, img_n_steps=12,
                               add_reverse=False):
         # img_n_steps=6 这个参数决定了一张图片里面有多少个旋转的小图片
         out_file_video = join(out_folder, '%s.mp4' % name)

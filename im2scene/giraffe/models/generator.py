@@ -161,6 +161,7 @@ class Generator(nn.Module):
 
     def get_camera(self, val_u=0.5, val_v=0.5, val_r=0.5, batch_size=32,
                    to_device=True):
+        # 为batch_size种车生成相机矩阵
         camera_mat = self.camera_matrix.repeat(batch_size, 1, 1)
         world_mat = get_camera_pose(
             self.range_u, self.range_v, self.range_radius, val_u, val_v,
@@ -186,6 +187,7 @@ class Generator(nn.Module):
         return R_bg
 
     def get_bg_rotation(self, val, batch_size=32, to_device=True):
+        # 疑似背景旋转？
         if self.backround_rotation_range != [0., 0.]:
             bg_r = self.backround_rotation_range
             r_val = bg_r[0] + val * (bg_r[1] - bg_r[0])
