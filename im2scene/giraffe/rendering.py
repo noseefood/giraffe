@@ -685,9 +685,11 @@ class Renderer(object):
             idx_paper = np.linspace(
                 0, n_steps - n_steps // img_n_steps, img_n_steps
             ).astype(np.int)
+            # 本质上即从n_steps中平均抽取了img_n_steps张
         else:
             idx_paper = np.linspace(0, n_steps - 1, img_n_steps).astype(np.int)
         for idx in range(batch_size):
+            # batch_size 即前面的shape和a篇appearance车型说明
             img_grid = imgs[idx_paper, idx]
             save_image(make_grid(
                 img_grid, nrow=img_n_steps, pad_value=1.), join(
