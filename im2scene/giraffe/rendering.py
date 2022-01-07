@@ -199,7 +199,7 @@ class Renderer(object):
             add_reverse=True)
 
     # 自定义的旋转加平移变换
-    def render_object_wipeout(self, img_out_path, batch_size=15, n_steps=32):
+    def render_object_wipeout(self, img_out_path, batch_size=15, n_steps=512):
         gen = self.generator
 
         # Get values
@@ -434,7 +434,7 @@ class Renderer(object):
         self.save_video_and_images(out, out_folder, name='translation_circle',
                                    is_full_rotation=True)
 
-    def render_camera_elevation(self, img_out_path, batch_size=15, n_steps=32):
+    def render_camera_elevation(self, img_out_path, batch_size=15, n_steps=64):
         # 只有相机高程的调整
         gen = self.generator
         n_boxes = gen.bounding_box_generator.n_boxes
