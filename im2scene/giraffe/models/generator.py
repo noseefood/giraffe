@@ -17,11 +17,11 @@ class Generator(nn.Module):
         z_dim (int): dimension of latent code z
         z_dim_bg (int): dimension of background latent code z_bg
         decoder (nn.Module): decoder network
-        range_u (tuple): rotation range (0 - 1)
-        range_v (tuple): elevation range (0 - 1)
+        range_u (tuple): rotation range (0 - 1) 旋转范围
+        range_v (tuple): elevation range (0 - 1) 高程范围
         n_ray_samples (int): number of samples per ray
         range_radius(tuple): radius range
-        depth_range (tuple): near and far depth plane
+        depth_range (tuple): near and far depth plane 深度范围
         background_generator (nn.Module): background generator
         bounding_box_generaor (nn.Module): bounding box generator
         resolution_vol (int): resolution of volume-rendered image
@@ -36,7 +36,7 @@ class Generator(nn.Module):
     '''
 
     def __init__(self, device, z_dim=256, z_dim_bg=128, decoder=None,
-                 range_u=(0, 0), range_v=(0.25, 0.25), n_ray_samples=64,
+                 range_u=(-0.1, 0.1), range_v=(0.25, 0.25), n_ray_samples=64,
                  range_radius=(2.732, 2.732), depth_range=[0.5, 6.],
                  background_generator=None,
                  bounding_box_generator=None, resolution_vol=16,
@@ -45,6 +45,9 @@ class Generator(nn.Module):
                  backround_rotation_range=[0., 0.],
                  sample_object_existance=False,
                  use_max_composition=False, **kwargs):
+        # 注意 这里的默认range_u=(0, 0), range_v=(0.25, 0.25)还有range_radius=(2.732, 2.732)，这里都是真实值范围
+        # range_u必须是里面不同值的范围，否则就会不动
+        # !改变range_v对结果没有影响，不知道为什么
         super().__init__()
         self.device = device
         self.n_ray_samples = n_ray_samples
@@ -161,13 +164,26 @@ class Generator(nn.Module):
 
     def get_camera(self, val_u=0.5, val_v=0.5, val_r=0.5, batch_size=32,
                    to_device=True):
+        # ！！！从Rendering传递进来的val_u，val_v和val_r注意都是值程度，为[0,1]之间的值
         # 为batch_size种车生成相机矩阵
+        # 前面初始化 self.camera_matrix = get_camera_mat(fov=fov).to(device)，根据焦距参数生成相机内参矩阵，无畸变，这里不用改变
+        # mat = torch.tensor([
+        #     [focal, 0., 0., 0.],
+        #     [0., focal, 0., 0.],
+        #     [0., 0., 1, 0.],
+        #     [0., 0., 0., 1.]
         camera_mat = self.camera_matrix.repeat(batch_size, 1, 1)
+
+        #     range_u (tuple): rotation range (0 - 1)
+        #     range_v (tuple): elevation range (0 - 1)
+        # get_camera_pose即获得相机外参
         world_mat = get_camera_pose(
             self.range_u, self.range_v, self.range_radius, val_u, val_v,
             val_r, batch_size=batch_size)
         if to_device:
             world_mat = world_mat.to(self.device)
+        # print(camera_mat.shape) torch.Size([15, 4, 4])
+        # print(world_mat.shape) torch.Size([15, 4, 4])
         return camera_mat, world_mat
 
     def get_random_bg_rotation(self, batch_size, to_device=True):
