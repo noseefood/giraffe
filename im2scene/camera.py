@@ -64,6 +64,7 @@ def get_camera_pose(range_u: object, range_v: object, range_r: object, val_u: ob
     u0, ur = range_u[0], range_u[1] - range_u[0]
     v0, vr = range_v[0], range_v[1] - range_v[0]
     r0, rr = range_r[0], range_r[1] - range_r[0]
+    # 在每一个step下val_u等都是不同的值，故u等值也是不同的值，u即绕z轴旋转的角度，v即高度坐标z
     u = u0 + val_u * ur
     v = v0 + val_v * vr
     r = r0 + val_r * rr

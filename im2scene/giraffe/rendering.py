@@ -68,9 +68,9 @@ class Renderer(object):
             if rp == 'render_camera_elevation':
                 self.set_random_seed()
                 self.render_camera_elevation(img_out_path)
-            if rp == 'render_camera_translation':
+            if rp == 'render_camera_rotation':
                 self.set_random_seed()
-                self.render_camera_translation(img_out_path)
+                self.render_camera_rotation(img_out_path)
             if rp == 'render_add_cars':
                 self.set_random_seed()
                 self.render_add_objects_cars5(img_out_path)
@@ -480,7 +480,7 @@ class Renderer(object):
         self.save_video_and_images(out, out_folder, name='elevation_camera',
                                    is_full_rotation=False)
 
-    def render_camera_translation(self, img_out_path, batch_size=15, n_steps=32):
+    def render_camera_rotation(self, img_out_path, batch_size=15, n_steps=32):
         # 只有相机高程的调整
         # 跟旋转一样的代码
         gen = self.generator
@@ -505,14 +505,13 @@ class Renderer(object):
         out = []
         for step in range(n_steps):
             # 将0-1划分为(n_steps - 1)段
-            v = step * 1.0 / (n_steps - 1)
-            # 自己加的部分
+            # v = step * 1.0 / (n_steps - 1)
+            # 自己加的部分 每一个step都会取一个递增的u
             u = step * 1.0 / (n_steps - 1)
             #
-            # r = 0.1 + v * (0.9 - 0.1) 这里的r与generator中的没有关系，不要搞混
+            # r = 0.1 + v * (0.9 - 0.1) 这里的r与generator中的没有关系，不要搞混,仅仅只是一个程度系数，每一个step会得到一个递增的r值
             r = r_range[0] + u * (r_range[1] - r_range[0])
             # 注意这里向相机多传入了一个参数r
-            # val_v为图像上下方向，即所谓高程，val_u为水平横向方向，val_r为相机旋转, 但是在这里改为val_u没有用，原因不明
             # 参数为val_u为控制相机旋转；参数为val_v为控制相机高程；参数为val_r为radial？
             camera_matrices = gen.get_camera(val_u=r, batch_size=batch_size)
             # 注意get_camera返回的其实是一个二维元组，包含了get_camera生成的camera_mat, world_mat两个矩阵
@@ -525,9 +524,9 @@ class Renderer(object):
             out.append(out_i.cpu())
         out = torch.stack(out)
 
-        out_folder = join(img_out_path, 'camera_translation')
+        out_folder = join(img_out_path, 'camera_rotation')
         makedirs(out_folder, exist_ok=True)
-        self.save_video_and_images(out, out_folder, name='camera_translation',
+        self.save_video_and_images(out, out_folder, name='camera_rotation',
                                    is_full_rotation=False)
 
     def render_add_objects_cars5(self, img_out_path, batch_size=15):

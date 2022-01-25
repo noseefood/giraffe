@@ -5,4 +5,4 @@ test:
   model_file: https://s3.eu-central-1.amazonaws.com/avg-projects/giraffe/models/checkpoint_cars256-d9ea5e11.pt
 rendering:
   render_dir: rendering
-  render_program: [ 'render_camera_translation' ]
+  render_program: [ 'render_camera_rotation' ]
