@@ -10,7 +10,6 @@ from os import makedirs
 from os.path import join
 
 
-
 class Renderer(object):
     '''  Render class for GIRAFFE.
 
@@ -29,7 +28,7 @@ class Renderer(object):
         gen.eval()
         self.generator = gen
 
-        # sample temperature; only used for visualiations
+        # sample temperature; only used for visualiations 这个参数决定了batch_size个形状外表的变化程度，如果为0则所有都是一样的形状外表
         self.sample_tmp = 0.65
 
     def set_random_seed(self):
@@ -90,7 +89,7 @@ class Renderer(object):
 
         # Set rotation range 总的旋转程度
         is_full_rotation: Union[bool, Any] = (bbox_generator.rotation_range[0] == 0
-                            and bbox_generator.rotation_range[1] == 1)
+                                              and bbox_generator.rotation_range[1] == 1)
         n_steps = int(n_steps * 2) if is_full_rotation else n_steps  # 这里n_steps其实乘以了2，说明是is_full_rotation为True
         r_scale = [0., 1.] if is_full_rotation else [0.1, 0.9]
 
@@ -210,7 +209,7 @@ class Renderer(object):
         bg_rotation = gen.get_random_bg_rotation(batch_size)
         camera_matrices = gen.get_camera(batch_size=batch_size)
         n_boxes = gen.bounding_box_generator.n_boxes
-        s = [[0., 0., 0.]   # 无缩放
+        s = [[0., 0., 0.]  # 无缩放
              for i in range(n_boxes)]
         n_steps = int(n_steps * 2)
         # 最小为0最大为1
@@ -311,7 +310,7 @@ class Renderer(object):
         out = []
         for j in range(n_samples):
             z_i1 = z_i[j]
-            z_i2 = z_i[(j+1) % (n_samples)]
+            z_i2 = z_i[(j + 1) % (n_samples)]
             for step in range(n_steps):
                 w = step * 1.0 / ((n_steps) - 1)
                 z_ii = interpolate_sphere(z_i1, z_i2, w)
@@ -364,7 +363,7 @@ class Renderer(object):
         out = []
         for j in range(n_samples):
             z_i1 = z_i[j]
-            z_i2 = z_i[(j+1) % (n_samples)]
+            z_i2 = z_i[(j + 1) % (n_samples)]
             for step in range(n_steps):
                 w = step * 1.0 / ((n_steps) - 1)
                 z_ii = interpolate_sphere(z_i1, z_i2, w)
@@ -467,7 +466,7 @@ class Renderer(object):
             r = r_range[0] + v * (r_range[1] - r_range[0])
             # 注意这里向相机多传入了一个参数r
             camera_matrices = gen.get_camera(val_v=r, batch_size=batch_size)
-    # 以下都是一样的
+            # 以下都是一样的
             with torch.no_grad():
                 out_i = gen(
                     batch_size, latent_codes, camera_matrices, transformations,
@@ -480,7 +479,7 @@ class Renderer(object):
         self.save_video_and_images(out, out_folder, name='elevation_camera',
                                    is_full_rotation=False)
 
-    def render_camera_rotation(self, img_out_path, batch_size=15, n_steps=32):
+    def render_camera_rotation(self, img_out_path, batch_size=15, n_steps=64):
         # 只有相机高程的调整
         # 跟旋转一样的代码
         gen = self.generator
@@ -490,15 +489,20 @@ class Renderer(object):
 
         # Get values
         latent_codes = gen.get_latent_codes(batch_size, tmp=self.sample_tmp)
-        bg_rotation = gen.get_random_bg_rotation(batch_size)
+        # 这里的sample_tmp值在最前面指定，可以控制在不同的种类里，形状外表的变化幅度，为0则表示所有都是一样的形状外表
+        # bg_rotation = gen.get_random_bg_rotation(batch_size)
+        bg_rotation = gen.get_bg_rotation(val=0, batch_size=batch_size)
+        # 固定背景旋转，但其实在这里get_random_bg_rotation(batch_size)也是一样的效果，因为get_random_bg_rotation函数默认的范围就是[0,0]，即背景无旋转
         transformations = gen.get_transformations(
             # 在这种情况下实际上transformations(即对物体使用固定的单一仿射变换)
             # 物体缩放部分  s_val
             [[0., 0., 0.] for i in range(n_boxes)],
             # 物体平移部分 t_val
             [[0.5, 0.5, 0.5] for i in range(n_boxes)],
+            # [[0., 0., 0.] for i in range(n_boxes)],
             # 物体旋转部分 r_val
-            [0.5 for i in range(n_boxes)],
+            [0. for i in range(n_boxes)],
+            # [0. for i in range(n_boxes)],
             batch_size,
         )
 
@@ -516,11 +520,15 @@ class Renderer(object):
             camera_matrices = gen.get_camera(val_u=r, batch_size=batch_size)
             # 注意get_camera返回的其实是一个二维元组，包含了get_camera生成的camera_mat, world_mat两个矩阵
             # print(len(camera_matrices))    输出2
-    # 以下都是一样的
+            # 以下都是一样的
             with torch.no_grad():
                 out_i = gen(
                     batch_size, latent_codes, camera_matrices, transformations,
-                    bg_rotation, mode='val')
+                    bg_rotation, mode='val', it=0,
+                    return_alpha_map=False,
+                    not_render_background=False,
+                    only_render_background=False)
+                # 这里是generator中的def forward！Generator类是一个nn类，会自动调用forward，原因不言自明
             out.append(out_i.cpu())
         out = torch.stack(out)
 
@@ -718,15 +726,15 @@ class Renderer(object):
                     write_small_vis=True):
         n_steps, batch_size = img_list.shape[:2]
         nrow = n_row if (n_row is not None) else int(sqrt(batch_size))
-        img = [(255*make_grid(img, nrow=nrow, pad_value=1.).permute(
+        img = [(255 * make_grid(img, nrow=nrow, pad_value=1.).permute(
             1, 2, 0)).cpu().numpy().astype(np.uint8) for img in img_list]
         if add_reverse:
             img += list(reversed(img))
         imageio.mimwrite(out_file, img, fps=30, quality=8)
         if write_small_vis:
-            img = [(255*make_grid(img, nrow=batch_size, pad_value=1.).permute(
+            img = [(255 * make_grid(img, nrow=batch_size, pad_value=1.).permute(
                 1, 2, 0)).cpu().numpy().astype(
-                    np.uint8) for img in img_list[:, :9]]
+                np.uint8) for img in img_list[:, :9]]
             if add_reverse:
                 img += list(reversed(img))
             imageio.mimwrite(
@@ -755,4 +763,4 @@ class Renderer(object):
             img_grid = imgs[idx_paper, idx]
             save_image(make_grid(
                 img_grid, nrow=img_n_steps, pad_value=1.), join(
-                    out_folder, '%04d_%s.jpg' % (idx, name)))
+                out_folder, '%04d_%s.jpg' % (idx, name)))

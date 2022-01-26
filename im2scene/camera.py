@@ -76,6 +76,8 @@ def get_camera_pose(range_u: object, range_v: object, range_r: object, val_u: ob
     radius = torch.ones(batch_size) * r
     loc = loc * radius.unsqueeze(-1)
     # print(loc.shape)  torch.Size([15, 3])
+
+    # 以下部分最好不要修改，关键在于上面，即如何得到xyz坐标
     R = look_at(loc)  # look_at函数返回的是r_mat旋转矩阵
     RT = torch.eye(4).reshape(1, 4, 4).repeat(batch_size, 1, 1)
     # 旋转  RT尺寸为15*4*4  所有batch_size，0-2行，0-2列
@@ -90,8 +92,8 @@ def get_camera_pose(range_u: object, range_v: object, range_r: object, val_u: ob
 
 
 def to_sphere(u, v):
-    # range_u (tuple): rotation range (0 - 1)，0相当于0度，1相当于360度
-    # range_v (tuple): elevation range (0 - 1)
+    # range_u (tuple): rotation range (0 - 1)，0相当于0度，1相当于360度，绕z轴的旋转
+    # range_v (tuple): elevation range (0 - 1) z轴的高度
     theta = 2 * np.pi * u
     phi = np.arccos(1 - 2 * v)  # ？没明白
 
@@ -105,8 +107,8 @@ def to_sphere(u, v):
 def sample_on_sphere(range_u=(0, 1), range_v=(0, 1), size=(1,),
                      to_pytorch=True):
     # 输入uv各自的范围，然后产生范围内的随机数，但其实get_camera_pose那里传来的range_u其实只包含一个数字
-    # range_u (tuple): rotation range (0 - 1)
-    # range_v (tuple): elevation range (0 - 1)
+    # range_u (tuple): rotation range (0 - 1) 绕z旋转的程度
+    # range_v (tuple): elevation range (0 - 1) 沿z轴的高程
     # print(range_u)  在纯高程的情况下为(0.0, 0.0)
     # print(range_v)  在纯高程的情况下不断变化，但是里面也是两个相同的值，相当于单值
     u = np.random.uniform(*range_u, size=size)
@@ -121,6 +123,7 @@ def sample_on_sphere(range_u=(0, 1), range_v=(0, 1), size=(1,),
 
 def look_at(eye, at=np.array([0, 0, 0]), up=np.array([0, 0, 1]), eps=1e-5,
             to_pytorch=True):
+    # 通过输入的xyz坐标来生成R
     at = at.astype(float).reshape(1, 3)
     up = up.astype(float).reshape(1, 3)
     eye = eye.reshape(-1, 3)

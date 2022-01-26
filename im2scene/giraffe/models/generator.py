@@ -24,7 +24,7 @@ class Generator(nn.Module):
         depth_range (tuple): near and far depth plane 深度范围
         background_generator (nn.Module): background generator
         bounding_box_generaor (nn.Module): bounding box generator
-        resolution_vol (int): resolution of volume-rendered image
+        resolution_vol (int): resolution of volume-rendered image  16*16 =256
         neural_renderer (nn.Module): neural renderer
         fov (float): field of view
         background_rotation_range (tuple): background rotation range
@@ -36,7 +36,7 @@ class Generator(nn.Module):
     '''
 
     def __init__(self, device, z_dim=256, z_dim_bg=128, decoder=None,
-                 range_u=(-0.1, 0.1), range_v=(0.25, 0.25), n_ray_samples=64,
+                 range_u=(-0.8, 0.8), range_v=(0.25, 0.25), n_ray_samples=64,
                  range_radius=(2.732, 2.732), depth_range=[0.5, 6.],
                  background_generator=None,
                  bounding_box_generator=None, resolution_vol=16,
@@ -89,6 +89,7 @@ class Generator(nn.Module):
                 return_alpha_map=False,
                 not_render_background=False,
                 only_render_background=False):
+        # 别忘记了，这里所属的Generator类其实是一个nn类，Generator不需要显示调用
         if latent_codes is None:
             latent_codes = self.get_latent_codes(batch_size)
 
@@ -127,6 +128,7 @@ class Generator(nn.Module):
 
     def get_latent_codes(self, batch_size=32, tmp=1.):
         z_dim, z_dim_bg = self.z_dim, self.z_dim_bg
+        # z_dim默认为256；z_dim_bg默认为128
 
         n_boxes = self.get_n_boxes()
 
