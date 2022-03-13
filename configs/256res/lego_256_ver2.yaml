@@ -22,4 +22,6 @@ model:
 training:
   out_dir:  out/lego256
   learning_rate: 0.00025
-
+rendering:
+  render_dir: rendering
+  render_program: [ 'render_camera_rotation','render_camera_elevation' ]
