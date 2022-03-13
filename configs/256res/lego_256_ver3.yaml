@@ -1,0 +1,28 @@
+data:
+  dataset_name: lego
+  path: data/blender/lego/train/*.png
+  fid_file: data/blender/lego/fid_files/lego_256.npz
+  img_size: 256
+model:
+  background_generator_kwargs:
+    rgb_out_dim: 256
+  bounding_box_generator_kwargs:
+    scale_range_min: [0.17, 0.17, 0.17]
+    scale_range_max: [0.17, 0.17, 0.17]
+    translation_range_min: [-0.5, -0.5, 0.]
+    translation_range_max: [0.5, 0.5, 0.]
+  generator_kwargs:
+    range_u: [0., 0.]
+    range_v: [0.2, 0.5]
+    fov: 15
+  neural_renderer_kwargs:
+    input_dim: 256
+    n_feat: 256
+  decoder_kwargs:
+    rgb_out_dim: 256
+training:
+  out_dir:  out/lego256
+  learning_rate: 0.00025
+rendering:
+  render_dir: rendering
+  render_program: [ 'render_camera_rotation','render_camera_elevation' ]
