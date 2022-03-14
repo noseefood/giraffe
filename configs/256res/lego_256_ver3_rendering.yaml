@@ -24,4 +24,4 @@ training:
   learning_rate: 0.00025
 rendering:
   render_dir: rendering
-  render_program: [ 'render_camera_rotation','render_camera_elevation' ]
+  render_program: [ 'render_camera_rotation','render_camera_elevation','object_rotation','object_translation_circle']
