@@ -12,7 +12,7 @@ model:
     translation_range_min: [-0.5, -0.5, 0.]
     translation_range_max: [0.5, 0.5, 0.]
   generator_kwargs:
-    range_v: [0.2, 0.5]
+    range_v: [0.3, 0.35]
     fov: 15
   neural_renderer_kwargs:
     input_dim: 256
@@ -24,4 +24,4 @@ training:
   learning_rate: 0.00025
 rendering:
   render_dir: rendering
-  render_program: [ 'render_camera_rotation','render_camera_elevation','object_rotation','object_translation_circle']
+  render_program: [ 'render_camera_rotation','render_camera_elevation','object_rotation','object_translation_circle' ]
